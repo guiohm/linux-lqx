@@ -10,7 +10,7 @@
 # Set these variables to ANYTHING that is not null to enable them
 
 ### Use config.custom.fragment
-_applyCustomConfigFragment=
+_applyCustomConfigFragment=1
 
 ### Tweak kernel options prior to a build via nconfig
 _makenconfig=
@@ -154,8 +154,7 @@ prepare() {
   ### Setting config
   echo "Setting config..."
   cat ${srcdir}/${_lqxpatchver}/linux-liquorix/debian/config/kernelarch-x86/config-arch-64 >./.config
-  #make olddefconfig
-  make oldconfig
+  make olddefconfig
   diff -u ${srcdir}/${_lqxpatchver}/linux-liquorix/debian/config/kernelarch-x86/config-arch-64 .config || :
  
   cat .config > .config.precustom
@@ -248,7 +247,7 @@ prepare() {
 	[[ -z "$_makegconfig" ]] || make gconfig
 
   echo "CUSTOM: generate new config.custom.fragment"
-  cat diff -u .config.precustom .config  > tee "${startdir}/config.custom.fragment" "${startdir}/config.custom.fragment.$(date +%Y-%m-%d-%Hh%M)"
+  diff -u .config.precustom .config | tee "${startdir}/config.custom.fragment" "${startdir}/config.custom.fragment.$(date +%Y-%m-%d-%Hh%M)"
 
   ### Save configuration for later reuse
 	cat .config > "${startdir}/config.$(date +%Y-%m-%d-%Hh%M)"
