@@ -9,6 +9,9 @@
 ### BUILD OPTIONS
 # Set these variables to ANYTHING that is not null to enable them
 
+### Use config.custom.fragment
+_applyCustomConfigFragment=
+
 ### Tweak kernel options prior to a build via nconfig
 _makenconfig=
 
@@ -16,7 +19,7 @@ _makenconfig=
 _makemenuconfig=
 
 ### Tweak kernel options prior to a build via xconfig
-_makexconfig=
+_makexconfig=1
 
 ### Tweak kernel options prior to a build via gconfig
 _makegconfig=
@@ -105,7 +108,12 @@ sha512sums=('329c1f94008742e3f0c2ce7e591a16316d1b2cb9ea4596d4f45604097e07b7aa2f6
             'SKIP'
             '50a0dd1bffe5fbdc59053f0a4eeb5f778042dd91784e55c468d2479c7766bc200de3f74b62ee028ce9c3086a1049ca7ee87e7c2a9a393f87df263859f62c0fd6')
 
-
+source+=(
+  config.custom.fragment
+)
+sha512sums+=(
+  'SKIP'
+)
 
 export KBUILD_BUILD_HOST=archlinux
 export KBUILD_BUILD_USER=$pkgbase
@@ -146,8 +154,20 @@ prepare() {
   ### Setting config
   echo "Setting config..."
   cat ${srcdir}/${_lqxpatchver}/linux-liquorix/debian/config/kernelarch-x86/config-arch-64 >./.config
-  make olddefconfig
+  #make olddefconfig
+  make oldconfig
   diff -u ${srcdir}/${_lqxpatchver}/linux-liquorix/debian/config/kernelarch-x86/config-arch-64 .config || :
+ 
+  cat .config > .config.precustom
+
+  if [ -n "$_applyCustomConfigFragment" ]; then
+    echo "Patching config with our custom one..."
+    ./scripts/kconfig/merge_config.sh -r -m .config ${startdir}/config.custom.fragment
+    make oldconfig
+  fi
+
+  msg2 "Please review changes then press Enter to continue..."
+  read
 
   ### Prepared version
   make -s kernelrelease > version
@@ -227,18 +247,21 @@ prepare() {
   ### Running make gconfig
 	[[ -z "$_makegconfig" ]] || make gconfig
 
+  echo "CUSTOM: generate new config.custom.fragment"
+  cat diff -u .config.precustom .config  > tee "${startdir}/config.custom.fragment" "${startdir}/config.custom.fragment.$(date +%Y-%m-%d-%Hh%M)"
+
   ### Save configuration for later reuse
-	cat .config > "${startdir}/config.last"
+	cat .config > "${startdir}/config.$(date +%Y-%m-%d-%Hh%M)"
 }
 
 build() {
   cd $_srcname
 
-  make all
+  time make -j4 all
   if [ -n "$_htmldocs_enable" ]; then
     make htmldocs
   fi
-  make -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
+  time make -j4 -C tools/bpf/bpftool vmlinux.h feature-clang-bpf-co-re=1
 }
 
 _package() {
