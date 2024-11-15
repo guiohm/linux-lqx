@@ -161,9 +161,7 @@ prepare() {
 
   if [ -n "$_applyCustomConfigFragment" ]; then
     msg2 "Patching config with our custom one..."
-    
-    ./scripts/kconfig/merge_config.sh -m ${startdir}/config.custom.fragment
-    read
+    ./scripts/kconfig/merge_config.sh -m .config ${startdir}/config.custom.fragment
     make oldconfig
   fi
 
@@ -245,11 +243,11 @@ prepare() {
   ### Running make gconfig
 	[[ -z "$_makegconfig" ]] || make gconfig
 
-  msg2 "Pausing. Now would be a good time to 'git diff' the config and review the changes.\n Then press Enter save the config fragment and continue..."
+  msg2 "Pausing. Now would be a good time to 'git diff' the config and review the changes before saving the config.fragment.\n Then press Enter to continue..."
   read
 
   msg2 "CUSTOM: generate new config.custom.fragment"
-  diff -u .config.precustom .config | tee "${startdir}/config.custom.fragment" "${startdir}/config.custom.fragment.$(date +%Y-%m-%d-%Hh%M)"
+  scripts/diffconfig .config.precustom .config -m | tee "${startdir}/config.custom.fragment" "${startdir}/config.custom.fragment.$(date +%Y-%m-%d-%Hh%M)"
 
   ### Save configuration for later reuse
   cat .config > "${startdir}/config.$(date +%Y-%m-%d-%Hh%M)"

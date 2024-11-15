@@ -1,0 +1,16 @@
+# Custom kernel tracking linux-lqx
+
+This is highly customised to fit my main machine. The config.fragments applied are based on upstream linux-lqx config.
+
+## build
+
+`$ makepkg -C`
+
+## Rebuild after just changing the config
+
+`$ makepkg --noextract --nodeps -f`
+
+## Install
+
+`# pacman -U linux-lqx-6.* linux-lqx-headers-6.*`
+
