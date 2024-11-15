@@ -131,12 +131,12 @@ prepare() {
   local _patchfolder="${srcdir}/${_lqxpatchver}/linux-liquorix/debian/patches"
   grep -P '^(zen|lqx)/' "$_patchfolder/series" | while IFS= read -r line
   do
-    echo "Patching sources with $line"
+    msg2 "Patching sources with $line"
     patch -Np1 -i "$_patchfolder/$line"
   done
 
   ### Setting version
-  echo "Setting version..."
+  msg2 "Setting version..."
   echo "-$pkgrel" > localversion.10-pkgrel
   echo "${pkgbase#linux}" > localversion.20-pkgname
 
@@ -147,12 +147,12 @@ prepare() {
       src="${src##*/}"
       src="${src%.zst}"
       [[ $src = *.patch ]] || continue
-  echo "Applying patch $src..."
+  msg2 "Applying patch $src..."
   patch -Np1 < "../$src"
   done
 
   ### Setting config
-  echo "Setting config..."
+  msg2 "Setting config..."
   cat ${srcdir}/${_lqxpatchver}/linux-liquorix/debian/config/kernelarch-x86/config-arch-64 >./.config
   make olddefconfig
   diff -u ${srcdir}/${_lqxpatchver}/linux-liquorix/debian/config/kernelarch-x86/config-arch-64 .config || :
@@ -160,17 +160,16 @@ prepare() {
   cat .config > .config.precustom
 
   if [ -n "$_applyCustomConfigFragment" ]; then
-    echo "Patching config with our custom one..."
-    ./scripts/kconfig/merge_config.sh -r -m .config ${startdir}/config.custom.fragment
+    msg2 "Patching config with our custom one..."
+    
+    ./scripts/kconfig/merge_config.sh -m ${startdir}/config.custom.fragment
+    read
     make oldconfig
   fi
 
-  msg2 "Please review changes then press Enter to continue..."
-  read
-
   ### Prepared version
   make -s kernelrelease > version
-  echo "Prepared $pkgbase version $(<version)"
+  msg2 "Prepared $pkgbase version $(<version)"
 
   ### Optionally use running kernel's config
 	# code originally by nous; http://aur.archlinux.org/packages.php?ID=40191
@@ -222,16 +221,16 @@ prepare() {
   fi
 
   ## Use DWARF5 debug info for Arch
-  echo "Upgrading debug info from toolchain default to DWARF v5..."
+  msg2 "Upgrading debug info from toolchain default to DWARF v5..."
   scripts/config -e CONFIG_DEBUG_INFO_DWARF5
 
   ## Use Arch Wiki TOMOYO configuration: https://wiki.archlinux.org/title/TOMOYO_Linux#Installation_2
-  echo "Replacing Debian TOMOYO configuration with upstream Arch Linux..."
+  msg2 "Replacing Debian TOMOYO configuration with upstream Arch Linux..."
   scripts/config --set-str CONFIG_SECURITY_TOMOYO_POLICY_LOADER      "/usr/bin/tomoyo-init"
   scripts/config --set-str CONFIG_SECURITY_TOMOYO_ACTIVATION_TRIGGER "/usr/lib/systemd/systemd"
 
   ## Add landlock for pacman sandbox support
-  echo "Adding 'landlock' to CONFIG_LSM for pacman sandbox support"
+  msg2 "Adding 'landlock' to CONFIG_LSM for pacman sandbox support"
   scripts/config --set-str CONFIG_LSM "landlock,lockdown,yama,bpf"
 
   ### Running make nconfig
@@ -246,11 +245,14 @@ prepare() {
   ### Running make gconfig
 	[[ -z "$_makegconfig" ]] || make gconfig
 
-  echo "CUSTOM: generate new config.custom.fragment"
+  msg2 "Pausing. Now would be a good time to 'git diff' the config and review the changes.\n Then press Enter save the config fragment and continue..."
+  read
+
+  msg2 "CUSTOM: generate new config.custom.fragment"
   diff -u .config.precustom .config | tee "${startdir}/config.custom.fragment" "${startdir}/config.custom.fragment.$(date +%Y-%m-%d-%Hh%M)"
 
   ### Save configuration for later reuse
-	cat .config > "${startdir}/config.$(date +%Y-%m-%d-%Hh%M)"
+  cat .config > "${startdir}/config.$(date +%Y-%m-%d-%Hh%M)"
 }
 
 build() {
